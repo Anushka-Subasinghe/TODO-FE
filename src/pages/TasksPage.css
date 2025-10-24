@@ -1,0 +1,46 @@
+.task-container {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 20px;
+  padding: 20px;
+  background-color: white;
+  min-width: 100vw;
+  min-height: 100vh;
+  box-sizing: border-box;
+}
+
+.status-toggle {
+  position: fixed;
+  bottom: 20px;
+  right: 30px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: #ffffff;
+  padding: 10px 16px;
+  border-radius: 8px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+  border: 1px solid #e0e0e0;
+  transition: box-shadow 0.2s ease-in-out;
+}
+
+.status-toggle:hover {
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.25);
+}
+
+.status-toggle input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: #007bff;
+  cursor: pointer;
+}
+
+.status-toggle label {
+  font-size: 1rem;
+  color: #333;
+  cursor: pointer;
+  user-select: none;
+}

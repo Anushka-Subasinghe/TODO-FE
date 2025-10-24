@@ -1,0 +1,121 @@
+.wizard-container {
+  max-width: 650px;
+  margin: 2rem auto;
+  padding: 2.5rem;
+  background-color: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+  font-family: "Segoe UI", sans-serif;
+  color: #2c3e50;
+}
+
+h2 {
+  text-align: center;
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #1d3557;
+  margin-bottom: 1.5rem;
+  letter-spacing: 0.5px;
+  border-bottom: 2px solid #007bff;
+  padding-bottom: 0.6rem;
+}
+
+.wizard-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.3rem;
+}
+
+label {
+  display: block;
+  font-weight: 600;
+  font-size: 1rem;
+  color: #1d3557;
+  margin-bottom: 0.4rem;
+  transition: color 0.2s;
+}
+
+label:hover {
+  color: #007bff;
+}
+
+input,
+select,
+textarea {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 1rem;
+  transition: border-color 0.2s ease;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  border-color: #007bff;
+}
+
+.error {
+  color: #d93025;
+  font-size: 0.9rem;
+}
+
+.button-group {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 1.2rem;
+}
+
+button {
+  padding: 10px 20px;
+  background-color: #007bff;
+  border: none;
+  border-radius: 6px;
+  color: #fff;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background-color 0.2s, transform 0.1s ease-in-out;
+}
+
+button:hover {
+  background-color: #0056b3;
+  transform: translateY(-1px);
+}
+
+.review-section {
+  background: #f8f9fa;
+  padding: 1.5rem;
+  border-radius: 10px;
+  border: 1px solid #dee2e6;
+}
+
+.review-section h3 {
+  color: #1d3557;
+  margin-bottom: 1rem;
+  font-size: 1.3rem;
+}
+
+.review-section p {
+  margin: 0.5rem 0;
+  font-size: 1rem;
+  color: #333;
+}
+
+.review-section b {
+  color: #007bff;
+}
+
+.preview-box {
+  background-color: #f8f8f8;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  padding: 1rem;
+  margin: 1rem 0;
+}
+
+.preview-content {
+  white-space: pre-wrap;
+  color: #333;
+}

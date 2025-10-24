@@ -22,3 +22,13 @@
 .home-button:hover {
   background-color: #0056b3;
 }
+
+.home-button.logout {
+  background-color: #d9534f;
+  color: white;
+  margin-top: 20px;
+}
+
+.home-button.logout:hover {
+  background-color: #c9302c;
+}

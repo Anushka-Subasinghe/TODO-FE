@@ -7,26 +7,14 @@ import "./TasksPage.css";
 const TasksPage = ({
   tasks,
   setStatus,
+  reOrder,
+  onToggleDone,
 }: {
   tasks: TaskType[];
   setStatus: React.Dispatch<SetStateAction<boolean>>;
+  reOrder: (swappedTasks: TaskType[]) => Promise<void>;
+  onToggleDone: (task: TaskType) => Promise<void>;
 }) => {
-  const reOrder = useCallback(async (swappedTasks: TaskType[]) => {
-    await api.put("/tasks/reorder", {
-      items: swappedTasks.map((t) => ({
-        id: t.id,
-        orderIndex: t.orderIndex,
-        version: t.version,
-      })),
-    });
-  }, []);
-
-  const onToggleDone = useCallback(async (task: TaskType) => {
-    await api.put(`/tasks/${task.id}`, {
-      done: !task.done,
-    });
-  }, []);
-
   const onLeftClick = useCallback(
     (i: number) => {
       const arr = [...tasks];

@@ -9,10 +9,39 @@ import type { TaskType } from "./types/TaskType";
 import LoginPage from "./pages/LoginPage";
 import RequireAuth from "./components/RequireAuth";
 import { Toaster } from "react-hot-toast";
+import { useMutation, useQuery } from "@tanstack/react-query";
 
 function App() {
   const [tasks, setTasks] = useState<TaskType[]>([]);
   const [status, setStatus] = useState<boolean>(false);
+  useQuery({
+    queryKey: ["tasks", status],
+    queryFn: async () => {
+      const res = await api.get(`/tasks?status=${!status ? "open" : "done"}`);
+      setTasks(sortTasks(res.data.data));
+      return res.data.data;
+    },
+  });
+
+  const { mutateAsync: reOrder } = useMutation({
+    mutationFn: async (swappedTasks: TaskType[]) => {
+      await api.patch("/tasks/reorder", {
+        items: swappedTasks.map((t) => ({
+          id: t.id,
+          orderIndex: t.orderIndex,
+          version: t.version,
+        })),
+      });
+    },
+  });
+
+  const { mutateAsync: statusUpdateAsync } = useMutation({
+    mutationFn: async (task: TaskType) => {
+      await api.patch(`/tasks/${task.id}`, {
+        done: !task.done,
+      });
+    },
+  });
 
   const sortTasks = useCallback(
     (t: TaskType[]) => t.sort((a, b) => a.orderIndex - b.orderIndex),
@@ -41,17 +70,6 @@ function App() {
     },
     [sortTasks]
   );
-
-  const getTasks = async () => {
-    const res = await api.get(`/tasks?status=${!status ? "open" : "done"}`);
-    const sortedTasks = sortTasks(res.data.data);
-
-    setTasks(sortedTasks);
-  };
-
-  useEffect(() => {
-    getTasks();
-  }, [status]);
 
   useEffect(() => {
     const eventSource = new EventSource("http://localhost:3000/stream");
@@ -90,7 +108,14 @@ function App() {
           />
           <Route
             path="tasks"
-            element={<TasksPage tasks={tasks} setStatus={setStatus} />}
+            element={
+              <TasksPage
+                tasks={tasks}
+                setStatus={setStatus}
+                reOrder={reOrder}
+                onToggleDone={statusUpdateAsync}
+              />
+            }
           />
         </Route>
       </Routes>

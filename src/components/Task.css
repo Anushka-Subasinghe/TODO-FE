@@ -23,7 +23,34 @@
   }
 }
 
-/* Staggered animation for multiple tasks */
+.task-item.task-removing {
+  animation: taskSlideOut 0.4s ease-in forwards;
+  pointer-events: none;
+}
+
+@keyframes taskSlideOut {
+  0% {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+    max-height: 500px;
+    margin-bottom: 16px;
+  }
+  50% {
+    opacity: 0;
+    transform: translateX(30px) scale(0.9);
+    max-height: 500px;
+    margin-bottom: 16px;
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(30px) scale(0.9);
+    max-height: 0;
+    margin-bottom: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+}
+
 .task-item:nth-child(1) {
   animation-delay: 0.1s;
 }

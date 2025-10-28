@@ -2,8 +2,10 @@ import DOMPurify from "dompurify";
 import React, { useMemo, useState, useRef, useEffect } from "react";
 
 import "./Task.css";
+import type { TaskType } from "../types/TaskType";
 
 const Task = ({
+  id,
   title,
   description,
   priority,
@@ -12,7 +14,9 @@ const Task = ({
   onToggleDone,
   onLeftClick,
   onRightClick,
+  onUpdateTask,
 }: {
+  id?: string;
   title: string;
   description: string;
   priority: "low" | "med" | "high";
@@ -21,11 +25,13 @@ const Task = ({
   onToggleDone: () => void;
   onLeftClick: () => void;
   onRightClick: () => void;
+  onUpdateTask: (task: TaskType) => void;
 }) => {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [isEditingDescription, setIsEditingDescription] = useState(false);
   const [isEditingPriority, setIsEditingPriority] = useState(false);
   const [isEditingDate, setIsEditingDate] = useState(false);
+  const [isRemoving, setIsRemoving] = useState(false);
 
   const [editTitle, setEditTitle] = useState(title);
   const [editDescription, setEditDescription] = useState(description);
@@ -35,19 +41,30 @@ const Task = ({
   );
 
   const priorityDropdownRef = useRef<HTMLDivElement>(null);
+  const saveButtonRef = useRef<HTMLButtonElement>(null);
+  const cancelButtonRef = useRef<HTMLButtonElement>(null);
 
-  // Get today's date for min attribute
+  const isActivelyEditingRef = useRef(false);
+
   const today = useMemo(() => {
     const date = new Date();
     return date.toISOString().split("T")[0];
   }, []);
 
   const safeDescription = useMemo(
-    () => DOMPurify.sanitize(description),
-    [description]
+    () => DOMPurify.sanitize(editDescription),
+    [editDescription]
   );
 
-  // Check if any field has changed
+  useEffect(() => {
+    if (!isActivelyEditingRef.current) {
+      setEditTitle(title);
+      setEditDescription(description);
+      setEditPriority(priority);
+      setEditDate(dueDate ? new Date(dueDate).toISOString().split("T")[0] : "");
+    }
+  }, [title, description, priority, dueDate]);
+
   const hasChanges = useMemo(() => {
     const originalDate = dueDate
       ? new Date(dueDate).toISOString().split("T")[0]
@@ -76,7 +93,10 @@ const Task = ({
     isEditingDate;
   const showActions = isEditing || hasChanges;
 
-  // Close priority dropdown when clicking outside
+  useEffect(() => {
+    isActivelyEditingRef.current = isEditing || hasChanges;
+  }, [isEditing, hasChanges]);
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -96,23 +116,32 @@ const Task = ({
     };
   }, [isEditingPriority]);
 
+  const handleToggleDone = () => {
+    setIsRemoving(true);
+    setTimeout(() => {
+      onToggleDone();
+    }, 400);
+  };
+
   const handleSaveAll = () => {
-    // TODO: Call API to update all changed fields
-    console.log("Saving all changes:", {
+    onUpdateTask({
+      id: id,
       title: editTitle,
       description: editDescription,
       priority: editPriority,
-      date: editDate,
-    });
+      dueDate: editDate ? new Date(editDate) : null,
+      done: done,
+    } as TaskType);
 
     setIsEditingTitle(false);
     setIsEditingDescription(false);
     setIsEditingPriority(false);
     setIsEditingDate(false);
+
+    isActivelyEditingRef.current = false;
   };
 
   const handleCancelAll = () => {
-    // Reset all fields to original values
     setEditTitle(title);
     setEditDescription(description);
     setEditPriority(priority);
@@ -122,6 +151,8 @@ const Task = ({
     setIsEditingDescription(false);
     setIsEditingPriority(false);
     setIsEditingDate(false);
+
+    isActivelyEditingRef.current = false;
   };
 
   const handlePrioritySelect = (newPriority: "low" | "med" | "high") => {
@@ -142,7 +173,6 @@ const Task = ({
     if (e.key === "Escape") {
       handleCancelAll();
     }
-    // Allow Enter for new lines in textarea
   };
 
   const handleDateKeyDown = (e: React.KeyboardEvent) => {
@@ -154,11 +184,38 @@ const Task = ({
     }
   };
 
+  const handleTitleBlur = (e: React.FocusEvent) => {
+    if (
+      e.relatedTarget !== saveButtonRef.current &&
+      e.relatedTarget !== cancelButtonRef.current
+    ) {
+      setIsEditingTitle(false);
+    }
+  };
+
+  const handleDescriptionBlur = (e: React.FocusEvent) => {
+    if (
+      e.relatedTarget !== saveButtonRef.current &&
+      e.relatedTarget !== cancelButtonRef.current
+    ) {
+      setIsEditingDescription(false);
+    }
+  };
+
+  const handleDateBlur = (e: React.FocusEvent) => {
+    if (
+      e.relatedTarget !== saveButtonRef.current &&
+      e.relatedTarget !== cancelButtonRef.current
+    ) {
+      setIsEditingDate(false);
+    }
+  };
+
   return (
     <div
       className={`task-item ${done ? "task-done" : ""} ${
         showActions ? "task-editing" : ""
-      }`}
+      } ${isRemoving ? "task-removing" : ""}`}
     >
       <button
         className="task-reorder-btn task-reorder-left"
@@ -177,19 +234,18 @@ const Task = ({
             type="checkbox"
             className="task-checkbox"
             checked={done}
-            onChange={onToggleDone}
+            onChange={handleToggleDone}
           />
         </div>
 
         <div className="task-body">
-          {/* Editable Title */}
           {isEditingTitle ? (
             <input
               type="text"
               className="task-title-input"
               value={editTitle}
               onChange={(e) => setEditTitle(e.target.value)}
-              onBlur={() => setIsEditingTitle(false)}
+              onBlur={handleTitleBlur}
               onKeyDown={handleTitleKeyDown}
               autoFocus
             />
@@ -203,7 +259,6 @@ const Task = ({
             </h3>
           )}
 
-          {/* Editable Description */}
           {editDescription && (
             <>
               {isEditingDescription ? (
@@ -211,7 +266,7 @@ const Task = ({
                   className="task-description-textarea"
                   value={editDescription}
                   onChange={(e) => setEditDescription(e.target.value)}
-                  onBlur={() => setIsEditingDescription(false)}
+                  onBlur={handleDescriptionBlur}
                   onKeyDown={handleDescriptionKeyDown}
                   autoFocus={isEditingDescription && !isEditingTitle}
                   rows={4}
@@ -228,7 +283,6 @@ const Task = ({
           )}
 
           <div className="task-metadata">
-            {/* Editable Due Date */}
             {isEditingDate ? (
               <div className="date-edit-wrapper">
                 <input
@@ -237,7 +291,7 @@ const Task = ({
                   value={editDate}
                   min={today}
                   onChange={(e) => setEditDate(e.target.value)}
-                  onBlur={() => setIsEditingDate(false)}
+                  onBlur={handleDateBlur}
                   onKeyDown={handleDateKeyDown}
                   autoFocus={
                     isEditingDate && !isEditingTitle && !isEditingDescription
@@ -267,7 +321,6 @@ const Task = ({
               )
             )}
 
-            {/* Editable Priority */}
             <div className="priority-wrapper" ref={priorityDropdownRef}>
               <span
                 className={`task-priority-badge priority-${editPriority}`}
@@ -307,13 +360,22 @@ const Task = ({
           </div>
         </div>
 
-        {/* Unified Save/Cancel Bar */}
         {showActions && (
           <div className="task-edit-actions">
-            <button className="task-save-btn" onClick={handleSaveAll}>
+            <button
+              ref={saveButtonRef}
+              className="task-save-btn"
+              onClick={handleSaveAll}
+              onMouseDown={(e) => e.preventDefault()}
+            >
               Save Changes
             </button>
-            <button className="task-cancel-btn" onClick={handleCancelAll}>
+            <button
+              ref={cancelButtonRef}
+              className="task-cancel-btn"
+              onClick={handleCancelAll}
+              onMouseDown={(e) => e.preventDefault()}
+            >
               Cancel
             </button>
           </div>

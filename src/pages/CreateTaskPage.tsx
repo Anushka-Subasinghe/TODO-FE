@@ -17,7 +17,6 @@ const CreateTaskPage = ({ orderIndex }: { orderIndex: number }) => {
   const [step, setStep] = useState(1);
   const [savedData, setSavedData] = useState<Partial<TaskFormInputs>>({});
 
-  // Get today's date in YYYY-MM-DD format for min date
   const today = useMemo(() => {
     const date = new Date();
     return date.toISOString().split("T")[0];

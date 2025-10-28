@@ -9,11 +9,13 @@ const TasksPage = ({
   setStatus,
   reOrder,
   onToggleDone,
+  onUpdateTask,
 }: {
   tasks: TaskType[];
   setStatus: React.Dispatch<SetStateAction<boolean>>;
   reOrder: (swappedTasks: TaskType[]) => Promise<void>;
   onToggleDone: (task: TaskType) => Promise<void>;
+  onUpdateTask: (task: TaskType) => Promise<void>;
 }) => {
   const onLeftClick = useCallback(
     (i: number) => {
@@ -59,6 +61,7 @@ const TasksPage = ({
       tasks.map((t, index) => (
         <Task
           key={t.id || `task-${t.orderIndex}-${index}`}
+          id={t.id}
           title={t.title}
           description={t.description}
           priority={t.priority}
@@ -67,9 +70,10 @@ const TasksPage = ({
           onLeftClick={() => onLeftClick(index)}
           onRightClick={() => onRightClick(index)}
           onToggleDone={() => onToggleDone(t)}
+          onUpdateTask={onUpdateTask}
         />
       )),
-    [tasks, onLeftClick, onRightClick, onToggleDone]
+    [tasks, onLeftClick, onRightClick, onToggleDone, onUpdateTask]
   );
 
   return (

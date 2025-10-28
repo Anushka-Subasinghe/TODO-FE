@@ -42,6 +42,17 @@ function App() {
     },
   });
 
+  const { mutateAsync: updateTaskAsync } = useMutation({
+    mutationFn: async (task: TaskType) => {
+      await api.patch(`/tasks/${task.id}`, {
+        title: task.title,
+        description: task.description,
+        priority: task.priority,
+        dueDate: task.dueDate,
+      });
+    },
+  });
+
   const sortTasks = useCallback(
     (t: TaskType[]) => t.sort((a, b) => a.orderIndex - b.orderIndex),
     []
@@ -113,6 +124,7 @@ function App() {
                 setStatus={setStatus}
                 reOrder={reOrder}
                 onToggleDone={statusUpdateAsync}
+                onUpdateTask={updateTaskAsync}
               />
             }
           />

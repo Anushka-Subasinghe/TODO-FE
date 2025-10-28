@@ -46,43 +46,71 @@ const LoginPage = () => {
         toast.error("Login failed. Please check your credentials.");
       }
     },
-    [from, setAuth]
+    [from, setAuth, navigate]
   );
 
   return (
-    <div className="login-container">
-      <h2 className="login-title">Sign In</h2>
-      <form onSubmit={handleSubmit(onSubmit)} className="login-form">
-        <div className="form-group">
-          <label htmlFor="email">Email</label>
-          <input
-            id="email"
-            type="email"
-            {...register("email", { required: "Email is required" })}
-            placeholder="Enter your email"
-          />
-          {errors.email && (
-            <span className="error">{errors.email.message}</span>
-          )}
+    <div className="login-page">
+      <div className="login-container">
+        <div className="login-header">
+          <div className="login-icon">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none">
+              <rect
+                x="3"
+                y="3"
+                width="18"
+                height="18"
+                rx="2"
+                stroke="currentColor"
+                strokeWidth="2"
+              />
+              <path
+                d="M9 12l2 2 4-4"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </div>
+          <h1 className="login-title">Welcome Back</h1>
+          <p className="login-subtitle">Sign in to continue to your tasks</p>
         </div>
 
-        <div className="form-group">
-          <label htmlFor="password">Password</label>
-          <input
-            id="password"
-            type="password"
-            {...register("password", { required: "Password is required" })}
-            placeholder="Enter your password"
-          />
-          {errors.password && (
-            <span className="error">{errors.password.message}</span>
-          )}
-        </div>
+        <form onSubmit={handleSubmit(onSubmit)} className="login-form">
+          <div className="form-group">
+            <label htmlFor="email">Email</label>
+            <input
+              id="email"
+              type="email"
+              {...register("email", { required: "Email is required" })}
+              placeholder="Enter your email"
+              className={errors.email ? "input-error" : ""}
+            />
+            {errors.email && (
+              <span className="error-message">{errors.email.message}</span>
+            )}
+          </div>
 
-        <button type="submit" className="submit-button">
-          Login
-        </button>
-      </form>
+          <div className="form-group">
+            <label htmlFor="password">Password</label>
+            <input
+              id="password"
+              type="password"
+              {...register("password", { required: "Password is required" })}
+              placeholder="Enter your password"
+              className={errors.password ? "input-error" : ""}
+            />
+            {errors.password && (
+              <span className="error-message">{errors.password.message}</span>
+            )}
+          </div>
+
+          <button type="submit" className="login-button">
+            Sign In
+          </button>
+        </form>
+      </div>
     </div>
   );
 };

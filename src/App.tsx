@@ -1,6 +1,5 @@
 import "./App.css";
-import { Route, Routes } from "react-router-dom";
-import HomePage from "./pages/Homepage";
+import { Route, Routes, Navigate } from "react-router-dom";
 import CreateTaskPage from "./pages/CreateTaskPage";
 import TasksPage from "./pages/TasksPage";
 import { useCallback, useEffect, useState } from "react";
@@ -101,7 +100,7 @@ function App() {
       <Routes>
         <Route path="login" element={<LoginPage />} />
         <Route element={<RequireAuth />}>
-          <Route path="/" element={<HomePage />} />
+          <Route path="/" element={<Navigate to="/tasks" replace />} />
           <Route
             path="create"
             element={<CreateTaskPage orderIndex={tasks.length} />}

@@ -1,7 +1,7 @@
 import { useCallback, useMemo, type SetStateAction } from "react";
 import Task from "../components/Task";
 import type { TaskType } from "../types/TaskType";
-import api from "../api/api";
+import Navbar from "../components/Navbar";
 import "./TasksPage.css";
 
 const TasksPage = ({
@@ -58,7 +58,7 @@ const TasksPage = ({
     () =>
       tasks.map((t, index) => (
         <Task
-          key={index}
+          key={t.id || `task-${t.orderIndex}-${index}`}
           title={t.title}
           description={t.description}
           priority={t.priority}
@@ -73,16 +73,25 @@ const TasksPage = ({
   );
 
   return (
-    <div className="task-container">
-      {taskList}
-      <div className="status-toggle">
-        <input
-          type="checkbox"
-          id="status"
-          name="Status"
-          onClick={() => setStatus((s) => !s)}
-        />
-        <label htmlFor="status">Finished Tasks</label>
+    <div className="tasks-page-wrapper">
+      <Navbar />
+      <div className="tasks-page">
+        <div className="tasks-header">
+          <h1 className="tasks-title">My Tasks</h1>
+          <div className="tasks-count">{tasks.length} tasks</div>
+        </div>
+
+        <div className="task-list">{taskList}</div>
+
+        <div className="status-toggle">
+          <input
+            type="checkbox"
+            id="status"
+            name="Status"
+            onChange={() => setStatus((s) => !s)}
+          />
+          <label htmlFor="status">Show completed tasks</label>
+        </div>
       </div>
     </div>
   );

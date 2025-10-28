@@ -14,7 +14,7 @@ function App() {
   const [tasks, setTasks] = useState<TaskType[]>([]);
   const [status, setStatus] = useState<boolean>(false);
   useQuery({
-    queryKey: ["tasks", status],
+    queryKey: [status],
     queryFn: async () => {
       const res = await api.get(`/tasks?status=${!status ? "open" : "done"}`);
       setTasks(sortTasks(res.data.data));

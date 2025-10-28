@@ -9,6 +9,53 @@
   align-items: stretch;
   gap: 12px;
   position: relative;
+  animation: taskSlideIn 0.5s ease-out backwards;
+}
+
+@keyframes taskSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Staggered animation for multiple tasks */
+.task-item:nth-child(1) {
+  animation-delay: 0.1s;
+}
+.task-item:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.task-item:nth-child(3) {
+  animation-delay: 0.2s;
+}
+.task-item:nth-child(4) {
+  animation-delay: 0.25s;
+}
+.task-item:nth-child(5) {
+  animation-delay: 0.3s;
+}
+.task-item:nth-child(6) {
+  animation-delay: 0.35s;
+}
+.task-item:nth-child(7) {
+  animation-delay: 0.4s;
+}
+.task-item:nth-child(8) {
+  animation-delay: 0.45s;
+}
+.task-item:nth-child(9) {
+  animation-delay: 0.5s;
+}
+.task-item:nth-child(10) {
+  animation-delay: 0.55s;
+}
+.task-item:nth-child(n + 11) {
+  animation-delay: 0.6s;
 }
 
 .task-item:hover {
@@ -37,14 +84,36 @@
   top: 16px;
   right: 16px;
   z-index: 5;
+  padding: 4px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.task-checkbox-wrapper:hover {
+  background: rgba(102, 126, 234, 0.1);
+  transform: scale(1.1);
 }
 
 .task-checkbox {
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
   cursor: pointer;
   accent-color: #667eea;
   margin: 0;
+  transition: all 0.2s ease;
+  border-radius: 4px;
+}
+
+.task-checkbox:hover {
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+}
+
+.task-checkbox:checked {
+  accent-color: #4caf50;
+}
+
+.task-checkbox:checked:hover {
+  box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.2);
 }
 
 .task-body {
@@ -368,6 +437,11 @@
   .task-checkbox-wrapper {
     top: 14px;
     right: 14px;
+  }
+
+  .task-checkbox {
+    width: 20px;
+    height: 20px;
   }
 
   .task-body {

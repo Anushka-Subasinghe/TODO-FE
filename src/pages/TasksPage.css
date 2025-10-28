@@ -11,12 +11,34 @@
   padding: 40px 20px 80px 20px;
   box-sizing: border-box;
   overflow-x: hidden;
+  animation: fadeIn 0.5s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .tasks-header {
   max-width: 1400px;
   margin: 0 auto 30px;
   padding: 0 20px;
+  animation: slideDown 0.6s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .tasks-title {
@@ -37,9 +59,10 @@
   max-width: 1400px;
   margin: 0 auto;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr));
+  grid-template-columns: repeat(auto-fill, 320px);
   gap: 16px;
   padding: 0 20px;
+  justify-content: center;
 }
 
 .status-toggle {
@@ -56,6 +79,18 @@
   border: none;
   transition: all 0.2s ease;
   z-index: 100;
+  animation: slideUp 0.7s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(50px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .status-toggle:hover {
@@ -80,6 +115,18 @@
   margin: 0;
 }
 
+@media (max-width: 1400px) {
+  .task-list {
+    grid-template-columns: repeat(auto-fill, 320px);
+  }
+}
+
+@media (max-width: 1100px) {
+  .task-list {
+    grid-template-columns: repeat(auto-fill, 300px);
+  }
+}
+
 @media (max-width: 768px) {
   .tasks-page {
     padding: 20px 10px 80px 10px;
@@ -90,7 +137,7 @@
   }
 
   .task-list {
-    grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr));
+    grid-template-columns: repeat(auto-fill, 280px);
     gap: 12px;
     padding: 0 10px;
   }
@@ -99,6 +146,12 @@
     bottom: 20px;
     right: 20px;
     padding: 10px 16px;
+  }
+}
+
+@media (max-width: 640px) {
+  .task-list {
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   }
 }
 

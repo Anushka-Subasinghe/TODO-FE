@@ -13,8 +13,9 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 function App() {
   const [tasks, setTasks] = useState<TaskType[]>([]);
   const [status, setStatus] = useState<boolean>(false);
+
   useQuery({
-    queryKey: [status],
+    queryKey: ["tasks", status],
     queryFn: async () => {
       const res = await api.get(`/tasks?status=${!status ? "open" : "done"}`);
       setTasks(sortTasks(res.data.data));
@@ -23,9 +24,9 @@ function App() {
   });
 
   const { mutateAsync: reOrder } = useMutation({
-    mutationFn: async (swappedTasks: TaskType[]) => {
+    mutationFn: async (reorderedTasks: TaskType[]) => {
       await api.patch("/tasks/reorder", {
-        items: swappedTasks.map((t) => ({
+        items: reorderedTasks.map((t) => ({
           id: t.id,
           orderIndex: t.orderIndex,
           version: t.version,
@@ -121,6 +122,7 @@ function App() {
             element={
               <TasksPage
                 tasks={tasks}
+                setTasks={setTasks}
                 setStatus={setStatus}
                 reOrder={reOrder}
                 onToggleDone={statusUpdateAsync}

@@ -1,5 +1,7 @@
 import DOMPurify from "dompurify";
 import React, { useMemo, useState, useRef, useEffect } from "react";
+import { useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 import "./Task.css";
 import type { TaskType } from "../types/TaskType";
@@ -12,9 +14,10 @@ const Task = ({
   dueDate,
   done,
   onToggleDone,
-  onLeftClick,
-  onRightClick,
   onUpdateTask,
+  orderIndex,
+  version,
+  disableAnimation = false,
 }: {
   id?: string;
   title: string;
@@ -23,9 +26,10 @@ const Task = ({
   dueDate: Date;
   done: boolean;
   onToggleDone: () => void;
-  onLeftClick: () => void;
-  onRightClick: () => void;
   onUpdateTask: (task: TaskType) => void;
+  orderIndex: number;
+  version: number;
+  disableAnimation?: boolean;
 }) => {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [isEditingDescription, setIsEditingDescription] = useState(false);
@@ -45,6 +49,23 @@ const Task = ({
   const cancelButtonRef = useRef<HTMLButtonElement>(null);
 
   const isActivelyEditingRef = useRef(false);
+
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
+    id: id || `task-${orderIndex}`,
+  });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
 
   const today = useMemo(() => {
     const date = new Date();
@@ -213,21 +234,16 @@ const Task = ({
 
   return (
     <div
+      ref={setNodeRef}
+      style={style}
       className={`task-item ${done ? "task-done" : ""} ${
         showActions ? "task-editing" : ""
-      } ${isRemoving ? "task-removing" : ""}`}
+      } ${isRemoving ? "task-removing" : ""} ${
+        isDragging ? "task-dragging" : ""
+      } ${disableAnimation ? "task-no-animation" : ""}`}
+      {...attributes}
+      {...listeners}
     >
-      <button
-        className="task-reorder-btn task-reorder-left"
-        onClick={onLeftClick}
-        aria-label="Move left"
-        title="Move left"
-      >
-        <svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor">
-          <path d="M10 12l-4-4 4-4v8z" />
-        </svg>
-      </button>
-
       <div className="task-content-wrapper">
         <div className="task-checkbox-wrapper">
           <input
@@ -235,6 +251,7 @@ const Task = ({
             className="task-checkbox"
             checked={done}
             onChange={handleToggleDone}
+            onPointerDown={(e) => e.stopPropagation()}
           />
         </div>
 
@@ -247,12 +264,14 @@ const Task = ({
               onChange={(e) => setEditTitle(e.target.value)}
               onBlur={handleTitleBlur}
               onKeyDown={handleTitleKeyDown}
+              onPointerDown={(e) => e.stopPropagation()}
               autoFocus
             />
           ) : (
             <h3
               className="task-title"
               onClick={() => setIsEditingTitle(true)}
+              onPointerDown={(e) => e.stopPropagation()}
               title="Click to edit"
             >
               {editTitle}
@@ -268,6 +287,7 @@ const Task = ({
                   onChange={(e) => setEditDescription(e.target.value)}
                   onBlur={handleDescriptionBlur}
                   onKeyDown={handleDescriptionKeyDown}
+                  onPointerDown={(e) => e.stopPropagation()}
                   autoFocus={isEditingDescription && !isEditingTitle}
                   rows={4}
                 />
@@ -275,6 +295,7 @@ const Task = ({
                 <div
                   className="task-description"
                   onClick={() => setIsEditingDescription(true)}
+                  onPointerDown={(e) => e.stopPropagation()}
                   dangerouslySetInnerHTML={{ __html: safeDescription }}
                   title="Click to edit"
                 />
@@ -293,6 +314,7 @@ const Task = ({
                   onChange={(e) => setEditDate(e.target.value)}
                   onBlur={handleDateBlur}
                   onKeyDown={handleDateKeyDown}
+                  onPointerDown={(e) => e.stopPropagation()}
                   autoFocus={
                     isEditingDate && !isEditingTitle && !isEditingDescription
                   }
@@ -303,6 +325,7 @@ const Task = ({
                 <span
                   className="task-due-date"
                   onClick={() => setIsEditingDate(true)}
+                  onPointerDown={(e) => e.stopPropagation()}
                   title="Click to edit"
                 >
                   <svg
@@ -327,6 +350,7 @@ const Task = ({
                 onClick={() => {
                   setIsEditingPriority(!isEditingPriority);
                 }}
+                onPointerDown={(e) => e.stopPropagation()}
                 title="Click to edit"
               >
                 {editPriority === "low" && "Low"}
@@ -339,18 +363,21 @@ const Task = ({
                   <button
                     className="priority-option priority-low"
                     onClick={() => handlePrioritySelect("low")}
+                    onPointerDown={(e) => e.stopPropagation()}
                   >
                     Low
                   </button>
                   <button
                     className="priority-option priority-med"
                     onClick={() => handlePrioritySelect("med")}
+                    onPointerDown={(e) => e.stopPropagation()}
                   >
                     Medium
                   </button>
                   <button
                     className="priority-option priority-high"
                     onClick={() => handlePrioritySelect("high")}
+                    onPointerDown={(e) => e.stopPropagation()}
                   >
                     High
                   </button>
@@ -367,6 +394,7 @@ const Task = ({
               className="task-save-btn"
               onClick={handleSaveAll}
               onMouseDown={(e) => e.preventDefault()}
+              onPointerDown={(e) => e.stopPropagation()}
             >
               Save Changes
             </button>
@@ -375,23 +403,13 @@ const Task = ({
               className="task-cancel-btn"
               onClick={handleCancelAll}
               onMouseDown={(e) => e.preventDefault()}
+              onPointerDown={(e) => e.stopPropagation()}
             >
               Cancel
             </button>
           </div>
         )}
       </div>
-
-      <button
-        className="task-reorder-btn task-reorder-right"
-        onClick={onRightClick}
-        aria-label="Move right"
-        title="Move right"
-      >
-        <svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor">
-          <path d="M6 4l4 4-4 4V4z" />
-        </svg>
-      </button>
     </div>
   );
 };

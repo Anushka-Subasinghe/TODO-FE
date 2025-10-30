@@ -2,7 +2,6 @@
   background: #ffffff;
   border-radius: 8px;
   padding: 16px 20px;
-  transition: all 0.2s ease;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
   border: 1px solid rgba(0, 0, 0, 0.06);
   display: flex;
@@ -10,6 +9,46 @@
   gap: 12px;
   position: relative;
   animation: taskSlideIn 0.5s ease-out backwards;
+  cursor: grab;
+  touch-action: none;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.task-item.task-no-animation {
+  animation: none;
+}
+
+.task-item:active {
+  cursor: grabbing;
+}
+
+.task-item.task-dragging {
+  z-index: 1000;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  cursor: grabbing;
+  transform: scale(1.02);
+  transition: box-shadow 0.2s ease, transform 0.1s ease;
+}
+
+.task-checkbox,
+.task-title-input,
+.task-description-textarea,
+.task-date-input,
+.task-priority-badge,
+.priority-option,
+.task-save-btn,
+.task-cancel-btn,
+.task-title,
+.task-description,
+.task-due-date {
+  cursor: pointer;
+}
+
+.task-title-input,
+.task-description-textarea,
+.task-date-input {
+  cursor: text;
 }
 
 @keyframes taskSlideIn {
@@ -83,6 +122,20 @@
 }
 .task-item:nth-child(n + 11) {
   animation-delay: 0.6s;
+}
+
+.task-item.task-no-animation:nth-child(1),
+.task-item.task-no-animation:nth-child(2),
+.task-item.task-no-animation:nth-child(3),
+.task-item.task-no-animation:nth-child(4),
+.task-item.task-no-animation:nth-child(5),
+.task-item.task-no-animation:nth-child(6),
+.task-item.task-no-animation:nth-child(7),
+.task-item.task-no-animation:nth-child(8),
+.task-item.task-no-animation:nth-child(9),
+.task-item.task-no-animation:nth-child(10),
+.task-item.task-no-animation:nth-child(n + 11) {
+  animation-delay: 0s;
 }
 
 .task-item:hover {
@@ -386,34 +439,6 @@
   transform: scale(0.98);
 }
 
-.task-reorder-btn {
-  background: rgba(102, 126, 234, 0.1);
-  border: 2px solid #667eea;
-  color: #667eea;
-  cursor: pointer;
-  padding: 8px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s ease;
-  width: 40px;
-  height: 40px;
-  flex-shrink: 0;
-  align-self: center;
-}
-
-.task-reorder-btn:hover {
-  background: #667eea;
-  color: white;
-  transform: scale(1.1);
-  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
-}
-
-.task-reorder-btn:active {
-  transform: scale(1);
-}
-
 .task-edit-actions {
   display: flex;
   gap: 10px;
@@ -473,11 +498,6 @@
 
   .task-body {
     padding-right: 35px;
-  }
-
-  .task-reorder-btn {
-    width: 36px;
-    height: 36px;
   }
 
   .task-title {

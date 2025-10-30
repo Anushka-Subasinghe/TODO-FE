@@ -1,59 +1,84 @@
-import { useCallback, useMemo, type SetStateAction } from "react";
+import {
+  useCallback,
+  useMemo,
+  useState,
+  type SetStateAction,
+  type Dispatch,
+} from "react";
+import { DndContext, type DragEndEvent, closestCenter } from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  rectSortingStrategy,
+} from "@dnd-kit/sortable";
 import Task from "../components/Task";
 import type { TaskType } from "../types/TaskType";
 import Navbar from "../components/Navbar";
 import "./TasksPage.css";
+import toast from "react-hot-toast";
 
 const TasksPage = ({
   tasks,
+  setTasks,
   setStatus,
   reOrder,
   onToggleDone,
   onUpdateTask,
 }: {
   tasks: TaskType[];
+  setTasks: Dispatch<SetStateAction<TaskType[]>>;
   setStatus: React.Dispatch<SetStateAction<boolean>>;
   reOrder: (swappedTasks: TaskType[]) => Promise<void>;
   onToggleDone: (task: TaskType) => Promise<void>;
   onUpdateTask: (task: TaskType) => Promise<void>;
 }) => {
-  const onLeftClick = useCallback(
-    (i: number) => {
-      const arr = [...tasks];
-      if (i > 0) {
-        const current = arr[i];
-        const left = arr[i - 1];
+  const [hasReordered, setHasReordered] = useState(false);
 
-        const tempOrder = current.orderIndex;
-        current.orderIndex = left.orderIndex;
-        left.orderIndex = tempOrder;
-
-        const swapped = [current, left];
-
-        reOrder(swapped);
-      }
-    },
-    [tasks, reOrder]
+  const taskIds = useMemo(
+    () => tasks.map((t) => t.id || `task-${t.orderIndex}`),
+    [tasks]
   );
 
-  const onRightClick = useCallback(
-    (i: number) => {
-      const arr = [...tasks];
-      if (i < arr.length - 1) {
-        const current = arr[i];
-        const right = arr[i + 1];
+  const handleDragEnd = useCallback(
+    async (event: DragEndEvent) => {
+      const { active, over } = event;
 
-        const tempOrder = current.orderIndex;
-        current.orderIndex = right.orderIndex;
-        right.orderIndex = tempOrder;
-
-        const swapped = [current, right];
-
-        reOrder(swapped);
+      if (!over || active.id === over.id) {
+        return;
       }
-      return [];
+
+      const oldIndex = tasks.findIndex(
+        (t) => (t.id || `task-${t.orderIndex}`) === active.id
+      );
+      const newIndex = tasks.findIndex(
+        (t) => (t.id || `task-${t.orderIndex}`) === over.id
+      );
+
+      if (oldIndex !== -1 && newIndex !== -1) {
+        const originalTasks = [...tasks];
+
+        setHasReordered(true);
+
+        const reorderedTasks = arrayMove(tasks, oldIndex, newIndex);
+        const updatedTasks = reorderedTasks.map((task, index) => ({
+          ...task,
+          orderIndex: index,
+        }));
+
+        setTasks(updatedTasks);
+
+        try {
+          await reOrder(updatedTasks);
+        } catch (error) {
+          console.error("Failed to reorder tasks:", error);
+
+          setTasks(originalTasks);
+
+          toast.error("Failed to reorder tasks. Please try again.");
+        }
+      }
     },
-    [tasks, reOrder]
+    [tasks, reOrder, setTasks]
   );
 
   const taskList = useMemo(
@@ -67,13 +92,14 @@ const TasksPage = ({
           priority={t.priority}
           dueDate={t.dueDate}
           done={t.done}
-          onLeftClick={() => onLeftClick(index)}
-          onRightClick={() => onRightClick(index)}
           onToggleDone={() => onToggleDone(t)}
           onUpdateTask={onUpdateTask}
+          orderIndex={t.orderIndex}
+          version={t.version}
+          disableAnimation={hasReordered}
         />
       )),
-    [tasks, onLeftClick, onRightClick, onToggleDone, onUpdateTask]
+    [tasks, onToggleDone, onUpdateTask, hasReordered]
   );
 
   return (
@@ -85,7 +111,14 @@ const TasksPage = ({
           <div className="tasks-count">{tasks.length} tasks</div>
         </div>
 
-        <div className="task-list">{taskList}</div>
+        <DndContext
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext items={taskIds} strategy={rectSortingStrategy}>
+            <div className="task-list">{taskList}</div>
+          </SortableContext>
+        </DndContext>
 
         <div className="status-toggle">
           <input

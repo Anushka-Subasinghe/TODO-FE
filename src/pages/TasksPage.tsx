@@ -60,15 +60,38 @@ const TasksPage = ({
         setHasReordered(true);
 
         const reorderedTasks = arrayMove(tasks, oldIndex, newIndex);
-        const updatedTasks = reorderedTasks.map((task, index) => ({
-          ...task,
-          orderIndex: index,
-        }));
+
+        const startIndex = Math.min(oldIndex, newIndex);
+        const endIndex = Math.max(oldIndex, newIndex);
+
+        const updatedAffectedTasks = reorderedTasks
+          .slice(startIndex, endIndex + 1)
+          .map((task, idx) => ({
+            ...task,
+            orderIndex: startIndex + idx,
+          }));
+
+        const updatedTasks = [
+          ...reorderedTasks.slice(0, startIndex),
+          ...updatedAffectedTasks,
+          ...reorderedTasks.slice(endIndex + 1),
+        ];
 
         setTasks(updatedTasks);
 
         try {
-          await reOrder(updatedTasks);
+          const changedTasks = updatedTasks
+            .slice(startIndex, endIndex + 1)
+            .filter((task) => {
+              const originalTask = originalTasks.find((t) => t.id === task.id);
+              return (
+                originalTask && originalTask.orderIndex !== task.orderIndex
+              );
+            });
+
+          if (changedTasks.length > 0) {
+            await reOrder(changedTasks);
+          }
         } catch (error) {
           console.error("Failed to reorder tasks:", error);
 

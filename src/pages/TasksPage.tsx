@@ -16,10 +16,12 @@ import type { TaskType } from "../types/TaskType";
 import Navbar from "../components/Navbar";
 import "./TasksPage.css";
 import toast from "react-hot-toast";
+import { useExport } from "../hooks/useExport";
 
 const TasksPage = ({
   tasks,
   setTasks,
+  status,
   setStatus,
   reOrder,
   onToggleDone,
@@ -27,12 +29,16 @@ const TasksPage = ({
 }: {
   tasks: TaskType[];
   setTasks: Dispatch<SetStateAction<TaskType[]>>;
+  status: boolean;
   setStatus: React.Dispatch<SetStateAction<boolean>>;
   reOrder: (swappedTasks: TaskType[]) => Promise<void>;
   onToggleDone: (task: TaskType) => Promise<void>;
   onUpdateTask: (task: TaskType) => Promise<void>;
 }) => {
   const [hasReordered, setHasReordered] = useState(false);
+
+  const { startExport, downloadCSV, exportJob, isExporting } =
+    useExport(status);
 
   const taskIds = useMemo(
     () => tasks.map((t) => t.id || `task-${t.orderIndex}`),
@@ -130,8 +136,30 @@ const TasksPage = ({
       <Navbar />
       <div className="tasks-page">
         <div className="tasks-header">
-          <h1 className="tasks-title">My Tasks</h1>
-          <div className="tasks-count">{tasks.length} tasks</div>
+          <div className="tasks-header-left">
+            <h1 className="tasks-title">My Tasks</h1>
+            <div className="tasks-count">{tasks.length} tasks</div>
+          </div>
+
+          <div className="tasks-header-actions">
+            {exportJob && exportJob.status === "processing" && (
+              <span className="export-status">Processing...</span>
+            )}
+
+            {exportJob && exportJob.status === "completed" && (
+              <button className="download-btn" onClick={downloadCSV}>
+                Download CSV
+              </button>
+            )}
+
+            <button
+              className="export-btn"
+              onClick={startExport}
+              disabled={isExporting || tasks.length === 0}
+            >
+              {isExporting ? "Exporting..." : "Export CSV"}
+            </button>
+          </div>
         </div>
 
         <DndContext

@@ -83,7 +83,9 @@ function App() {
   );
 
   useEffect(() => {
-    const eventSource = new EventSource("http://localhost:3000/stream");
+    const eventSource = new EventSource(
+      `${import.meta.env.VITE_BACKEND_URL}/stream`
+    );
 
     eventSource.addEventListener("task_created", (event) => {
       const data = JSON.parse((event as MessageEvent).data);
@@ -123,6 +125,7 @@ function App() {
               <TasksPage
                 tasks={tasks}
                 setTasks={setTasks}
+                status={status}
                 setStatus={setStatus}
                 reOrder={reOrder}
                 onToggleDone={statusUpdateAsync}

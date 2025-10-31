@@ -6,16 +6,20 @@ import { useCallback, useEffect, useState } from "react";
 import api from "./api/api";
 import type { TaskType } from "./types/TaskType";
 import LoginPage from "./pages/LoginPage";
-import RequireAuth from "./components/RequireAuth";
+import RequireAuth from "./components/RequireAuth.tsx";
 import { Toaster } from "react-hot-toast";
 import { useMutation, useQuery } from "@tanstack/react-query";
+import useAuth from "../src/hooks/useAuth";
 
 function App() {
   const [tasks, setTasks] = useState<TaskType[]>([]);
   const [status, setStatus] = useState<boolean>(false);
 
+  const { auth } = useAuth();
+
   useQuery({
     queryKey: ["tasks", status],
+    enabled: !!auth?.accessToken, // ✅ Only fetch when token exists
     queryFn: async () => {
       const res = await api.get(`/tasks?status=${!status ? "open" : "done"}`);
       setTasks(sortTasks(res.data.data));
@@ -83,8 +87,9 @@ function App() {
   );
 
   useEffect(() => {
+    const accessToken = localStorage.getItem("accessToken");
     const eventSource = new EventSource(
-      `${import.meta.env.VITE_BACKEND_URL}/stream`
+      `${import.meta.env.VITE_BACKEND_URL}/stream?token=${accessToken}`
     );
 
     eventSource.addEventListener("task_created", (event) => {

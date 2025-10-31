@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import api from "../api/api";
 import toast from "react-hot-toast";
+import useAuth from "./useAuth";
 
 interface ExportJob {
   jobId: string;
@@ -21,9 +22,11 @@ export const useExport = (currentStatus: boolean) => {
     if (!exportJob) return;
 
     if (!eventSourceRef.current) {
-      eventSourceRef.current = new EventSource(
-        `${import.meta.env.VITE_BACKEND_URL}/stream`
+      const accessToken = localStorage.getItem("accessToken");
+      const eventSource = new EventSource(
+        `${import.meta.env.VITE_BACKEND_URL}/stream?token=${accessToken}`
       );
+      eventSourceRef.current = eventSource;
     }
 
     const eventSource = eventSourceRef.current;

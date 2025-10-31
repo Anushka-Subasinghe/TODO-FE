@@ -2,29 +2,40 @@ import "./App.css";
 import { Route, Routes, Navigate } from "react-router-dom";
 import CreateTaskPage from "./pages/CreateTaskPage";
 import TasksPage from "./pages/TasksPage";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import api from "./api/api";
 import type { TaskType } from "./types/TaskType";
 import LoginPage from "./pages/LoginPage";
 import RequireAuth from "./components/RequireAuth.tsx";
-import { Toaster } from "react-hot-toast";
+import { Toaster, toast } from "react-hot-toast";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import useAuth from "../src/hooks/useAuth";
 
 function App() {
   const [tasks, setTasks] = useState<TaskType[]>([]);
   const [status, setStatus] = useState<boolean>(false);
+  const eventSourceRef = useRef<EventSource | null>(null);
+  const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null
+  );
+  const reconnectAttemptsRef = useRef(0);
+  const maxReconnectAttempts = 5;
 
   const { auth } = useAuth();
 
   useQuery({
     queryKey: ["tasks", status],
-    enabled: !!auth?.accessToken, // ✅ Only fetch when token exists
+    enabled: !!auth?.accessToken,
     queryFn: async () => {
       const res = await api.get(`/tasks?status=${!status ? "open" : "done"}`);
       setTasks(sortTasks(res.data.data));
       return res.data.data;
     },
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+    staleTime: 30000,
   });
 
   const { mutateAsync: reOrder } = useMutation({
@@ -37,6 +48,8 @@ function App() {
         })),
       });
     },
+    retry: 2,
+    retryDelay: 1000,
   });
 
   const { mutateAsync: statusUpdateAsync } = useMutation({
@@ -45,6 +58,8 @@ function App() {
         done: !task.done,
       });
     },
+    retry: 2,
+    retryDelay: 1000,
   });
 
   const { mutateAsync: updateTaskAsync } = useMutation({
@@ -56,6 +71,8 @@ function App() {
         dueDate: task.dueDate,
       });
     },
+    retry: 2,
+    retryDelay: 1000,
   });
 
   const sortTasks = useCallback(
@@ -86,11 +103,33 @@ function App() {
     [sortTasks]
   );
 
-  useEffect(() => {
+  const connectSSE = useCallback(() => {
+    if (eventSourceRef.current) {
+      eventSourceRef.current.close();
+    }
+
     const accessToken = localStorage.getItem("accessToken");
+
+    if (!accessToken) {
+      console.log("No access token, skipping SSE connection");
+      return;
+    }
+
+    console.log("Connecting to SSE...");
+
     const eventSource = new EventSource(
       `${import.meta.env.VITE_BACKEND_URL}/stream?token=${accessToken}`
     );
+
+    eventSource.onopen = () => {
+      console.log("SSE connected successfully");
+      reconnectAttemptsRef.current = 0;
+
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+        reconnectTimeoutRef.current = null;
+      }
+    };
 
     eventSource.addEventListener("task_created", (event) => {
       const data = JSON.parse((event as MessageEvent).data);
@@ -110,8 +149,100 @@ function App() {
       setTasks((prev) => updateTask(prev, data));
     });
 
-    return () => eventSource.close();
+    eventSource.onerror = (error) => {
+      console.error("SSE connection error:", error);
+      eventSource.close();
+
+      if (reconnectAttemptsRef.current < maxReconnectAttempts) {
+        reconnectAttemptsRef.current++;
+        const delay = Math.min(1000 * 2 ** reconnectAttemptsRef.current, 30000);
+
+        console.log(
+          `Reconnecting SSE in ${delay}ms (attempt ${reconnectAttemptsRef.current}/${maxReconnectAttempts})`
+        );
+
+        toast.error(
+          `Connection lost. Reconnecting... (${reconnectAttemptsRef.current}/${maxReconnectAttempts})`,
+          { duration: 2000 }
+        );
+
+        reconnectTimeoutRef.current = setTimeout(() => {
+          connectSSE();
+        }, delay);
+      } else {
+        console.error("Max SSE reconnection attempts reached");
+        toast.error("Connection lost. Please refresh the page.", {
+          duration: 5000,
+        });
+      }
+    };
+
+    eventSourceRef.current = eventSource;
   }, [mergeAndSortTasks, sortTasks, updateTask]);
+
+  useEffect(() => {
+    if (auth?.accessToken) {
+      connectSSE();
+    }
+
+    return () => {
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close();
+        eventSourceRef.current = null;
+      }
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+        reconnectTimeoutRef.current = null;
+      }
+    };
+  }, [auth?.accessToken, connectSSE]);
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible" && auth?.accessToken) {
+        console.log("Window regained focus, checking SSE connection...");
+
+        if (
+          !eventSourceRef.current ||
+          eventSourceRef.current.readyState === EventSource.CLOSED
+        ) {
+          console.log("SSE connection lost, reconnecting...");
+          connectSSE();
+        }
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [auth?.accessToken, connectSSE]);
+
+  useEffect(() => {
+    const handleOnline = () => {
+      console.log("Network connection restored");
+      toast.success("Connection restored", { duration: 2000 });
+
+      if (auth?.accessToken) {
+        reconnectAttemptsRef.current = 0;
+        connectSSE();
+      }
+    };
+
+    const handleOffline = () => {
+      console.log("Network connection lost");
+      toast.error("No internet connection", { duration: 3000 });
+    };
+
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, [auth?.accessToken, connectSSE]);
 
   return (
     <>

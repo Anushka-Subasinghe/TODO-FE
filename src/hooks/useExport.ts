@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import api from "../api/api";
 import toast from "react-hot-toast";
-import useAuth from "./useAuth";
 
 interface ExportJob {
   jobId: string;
@@ -17,19 +16,42 @@ export const useExport = (currentStatus: boolean) => {
     null
   );
   const eventSourceRef = useRef<EventSource | null>(null);
+  const reconnectAttemptsRef = useRef(0);
+  const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null
+  );
+  const maxReconnectAttempts = 5;
 
-  useEffect(() => {
+  const connectSSE = useCallback(() => {
     if (!exportJob) return;
 
-    if (!eventSourceRef.current) {
-      const accessToken = localStorage.getItem("accessToken");
-      const eventSource = new EventSource(
-        `${import.meta.env.VITE_BACKEND_URL}/stream?token=${accessToken}`
-      );
-      eventSourceRef.current = eventSource;
+    if (eventSourceRef.current) {
+      eventSourceRef.current.close();
+      eventSourceRef.current = null;
     }
 
-    const eventSource = eventSourceRef.current;
+    const accessToken = localStorage.getItem("accessToken");
+
+    if (!accessToken) {
+      console.log("No access token for export SSE");
+      return;
+    }
+
+    console.log("Connecting to export SSE...");
+
+    const eventSource = new EventSource(
+      `${import.meta.env.VITE_BACKEND_URL}/stream?token=${accessToken}`
+    );
+
+    eventSource.onopen = () => {
+      console.log("Export SSE connected successfully");
+      reconnectAttemptsRef.current = 0;
+
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+        reconnectTimeoutRef.current = null;
+      }
+    };
 
     const handleExportUpdate = (event: MessageEvent) => {
       if (event.type !== "export_update") {
@@ -56,9 +78,7 @@ export const useExport = (currentStatus: boolean) => {
 
       if (data.status === "completed") {
         setIsExporting(false);
-
         fetchExportStatus(data.jobId);
-
         toast.success("Export completed! You can now download your CSV.");
 
         if (pollingIntervalRef.current) {
@@ -78,10 +98,80 @@ export const useExport = (currentStatus: boolean) => {
 
     eventSource.addEventListener("export_update", handleExportUpdate);
 
-    return () => {
-      eventSource.removeEventListener("export_update", handleExportUpdate);
+    eventSource.onerror = (error) => {
+      console.error("Export SSE connection error:", error);
+      eventSource.close();
+
+      if (reconnectAttemptsRef.current < maxReconnectAttempts) {
+        reconnectAttemptsRef.current++;
+        const delay = Math.min(1000 * 2 ** reconnectAttemptsRef.current, 30000); // Max 30 seconds
+
+        console.log(
+          `Reconnecting export SSE in ${delay}ms (attempt ${reconnectAttemptsRef.current}/${maxReconnectAttempts})`
+        );
+
+        reconnectTimeoutRef.current = setTimeout(() => {
+          connectSSE();
+        }, delay);
+      } else {
+        console.error("Max export SSE reconnection attempts reached");
+      }
     };
+
+    eventSourceRef.current = eventSource;
   }, [exportJob?.jobId]);
+
+  useEffect(() => {
+    if (exportJob) {
+      connectSSE();
+    }
+
+    return () => {
+      if (eventSourceRef.current) {
+        eventSourceRef.current.removeEventListener("export_update", () => {});
+      }
+    };
+  }, [exportJob?.jobId, connectSSE]);
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible" && exportJob) {
+        console.log("Window regained focus, checking export SSE connection...");
+
+        if (
+          !eventSourceRef.current ||
+          eventSourceRef.current.readyState === EventSource.CLOSED
+        ) {
+          console.log("Export SSE connection lost, reconnecting...");
+          reconnectAttemptsRef.current = 0; // Reset attempts
+          connectSSE();
+        }
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [exportJob, connectSSE]);
+
+  useEffect(() => {
+    const handleOnline = () => {
+      console.log("Network connection restored, reconnecting export SSE...");
+
+      if (exportJob) {
+        reconnectAttemptsRef.current = 0;
+        connectSSE();
+      }
+    };
+
+    window.addEventListener("online", handleOnline);
+
+    return () => {
+      window.removeEventListener("online", handleOnline);
+    };
+  }, [exportJob, connectSSE]);
 
   useEffect(() => {
     return () => {
@@ -92,6 +182,10 @@ export const useExport = (currentStatus: boolean) => {
       if (pollingIntervalRef.current) {
         clearInterval(pollingIntervalRef.current);
         pollingIntervalRef.current = null;
+      }
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+        reconnectTimeoutRef.current = null;
       }
     };
   }, []);

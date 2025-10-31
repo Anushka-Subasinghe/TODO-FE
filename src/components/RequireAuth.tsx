@@ -19,14 +19,13 @@ const RequireAuth = () => {
       const decoded: DecodedToken = jwtDecode(token);
       return decoded.exp * 1000 < Date.now();
     } catch {
-      return true; // invalid or malformed token
+      return true;
     }
   };
 
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        // if no token or it's expired → refresh
         if (!auth?.accessToken || isTokenExpired(auth.accessToken)) {
           const res = await api.post(
             "/auth/refresh",

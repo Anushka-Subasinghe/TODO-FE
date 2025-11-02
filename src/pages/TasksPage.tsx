@@ -1,100 +1,185 @@
-import { useCallback, useMemo, type SetStateAction } from "react";
+import {
+  useCallback,
+  useMemo,
+  useState,
+  type SetStateAction,
+  type Dispatch,
+} from "react";
+import { DndContext, type DragEndEvent, closestCenter } from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  rectSortingStrategy,
+} from "@dnd-kit/sortable";
 import Task from "../components/Task";
 import type { TaskType } from "../types/TaskType";
-import api from "../api/api";
+import Navbar from "../components/Navbar";
 import "./TasksPage.css";
+import toast from "react-hot-toast";
+import { useExport } from "../hooks/useExport";
 
 const TasksPage = ({
   tasks,
+  setTasks,
+  status,
   setStatus,
+  reOrder,
+  onToggleDone,
+  onUpdateTask,
 }: {
   tasks: TaskType[];
+  setTasks: Dispatch<SetStateAction<TaskType[]>>;
+  status: boolean;
   setStatus: React.Dispatch<SetStateAction<boolean>>;
+  reOrder: (swappedTasks: TaskType[]) => Promise<void>;
+  onToggleDone: (task: TaskType) => Promise<void>;
+  onUpdateTask: (task: TaskType) => Promise<void>;
 }) => {
-  const reOrder = useCallback(async (swappedTasks: TaskType[]) => {
-    await api.put("/tasks/reorder", {
-      items: swappedTasks.map((t) => ({
-        id: t.id,
-        orderIndex: t.orderIndex,
-        version: t.version,
-      })),
-    });
-  }, []);
+  const [hasReordered, setHasReordered] = useState(false);
 
-  const onToggleDone = useCallback(async (task: TaskType) => {
-    await api.put(`/tasks/${task.id}`, {
-      done: !task.done,
-    });
-  }, []);
+  const { startExport, downloadCSV, exportJob, isExporting } =
+    useExport(status);
 
-  const onLeftClick = useCallback(
-    (i: number) => {
-      const arr = [...tasks];
-      if (i > 0) {
-        const current = arr[i];
-        const left = arr[i - 1];
-
-        const tempOrder = current.orderIndex;
-        current.orderIndex = left.orderIndex;
-        left.orderIndex = tempOrder;
-
-        const swapped = [current, left];
-
-        reOrder(swapped);
-      }
-    },
-    [tasks, reOrder]
+  const taskIds = useMemo(
+    () => tasks.map((t) => t.id || `task-${t.orderIndex}`),
+    [tasks]
   );
 
-  const onRightClick = useCallback(
-    (i: number) => {
-      const arr = [...tasks];
-      if (i < arr.length - 1) {
-        const current = arr[i];
-        const right = arr[i + 1];
+  const handleDragEnd = useCallback(
+    async (event: DragEndEvent) => {
+      const { active, over } = event;
 
-        const tempOrder = current.orderIndex;
-        current.orderIndex = right.orderIndex;
-        right.orderIndex = tempOrder;
-
-        const swapped = [current, right];
-
-        reOrder(swapped);
+      if (!over || active.id === over.id) {
+        return;
       }
-      return [];
+
+      const oldIndex = tasks.findIndex(
+        (t) => (t.id || `task-${t.orderIndex}`) === active.id
+      );
+      const newIndex = tasks.findIndex(
+        (t) => (t.id || `task-${t.orderIndex}`) === over.id
+      );
+
+      if (oldIndex !== -1 && newIndex !== -1) {
+        const originalTasks = [...tasks];
+
+        setHasReordered(true);
+
+        const reorderedTasks = arrayMove(tasks, oldIndex, newIndex);
+
+        const startIndex = Math.min(oldIndex, newIndex);
+        const endIndex = Math.max(oldIndex, newIndex);
+
+        const updatedAffectedTasks = reorderedTasks
+          .slice(startIndex, endIndex + 1)
+          .map((task, idx) => ({
+            ...task,
+            orderIndex: startIndex + idx,
+          }));
+
+        const updatedTasks = [
+          ...reorderedTasks.slice(0, startIndex),
+          ...updatedAffectedTasks,
+          ...reorderedTasks.slice(endIndex + 1),
+        ];
+
+        setTasks(updatedTasks);
+
+        try {
+          const changedTasks = updatedTasks
+            .slice(startIndex, endIndex + 1)
+            .filter((task) => {
+              const originalTask = originalTasks.find((t) => t.id === task.id);
+              return (
+                originalTask && originalTask.orderIndex !== task.orderIndex
+              );
+            });
+
+          if (changedTasks.length > 0) {
+            await reOrder(changedTasks);
+          }
+        } catch (error) {
+          console.error("Failed to reorder tasks:", error);
+
+          setTasks(originalTasks);
+
+          toast.error("Failed to reorder tasks. Please try again.");
+        }
+      }
     },
-    [tasks, reOrder]
+    [tasks, reOrder, setTasks]
   );
 
   const taskList = useMemo(
     () =>
       tasks.map((t, index) => (
         <Task
-          key={index}
+          key={t.id || `task-${t.orderIndex}-${index}`}
+          id={t.id}
           title={t.title}
           description={t.description}
           priority={t.priority}
           dueDate={t.dueDate}
           done={t.done}
-          onLeftClick={() => onLeftClick(index)}
-          onRightClick={() => onRightClick(index)}
           onToggleDone={() => onToggleDone(t)}
+          onUpdateTask={onUpdateTask}
+          orderIndex={t.orderIndex}
+          version={t.version}
+          disableAnimation={hasReordered}
         />
       )),
-    [tasks, onLeftClick, onRightClick, onToggleDone]
+    [tasks, onToggleDone, onUpdateTask, hasReordered]
   );
 
   return (
-    <div className="task-container">
-      {taskList}
-      <div className="status-toggle">
-        <input
-          type="checkbox"
-          id="status"
-          name="Status"
-          onClick={() => setStatus((s) => !s)}
-        />
-        <label htmlFor="status">Finished Tasks</label>
+    <div className="tasks-page-wrapper">
+      <Navbar />
+      <div className="tasks-page">
+        <div className="tasks-header">
+          <div className="tasks-header-left">
+            <h1 className="tasks-title">My Tasks</h1>
+            <div className="tasks-count">{tasks.length} tasks</div>
+          </div>
+
+          <div className="tasks-header-actions">
+            {exportJob && exportJob.status === "processing" && (
+              <span className="export-status">Processing...</span>
+            )}
+
+            {exportJob && exportJob.status === "completed" && (
+              <button className="download-btn" onClick={downloadCSV}>
+                Download CSV
+              </button>
+            )}
+
+            <button
+              className="export-btn"
+              onClick={startExport}
+              disabled={isExporting || tasks.length === 0}
+            >
+              {isExporting ? "Exporting..." : "Export CSV"}
+            </button>
+          </div>
+        </div>
+
+        <DndContext
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext items={taskIds} strategy={rectSortingStrategy}>
+            <div className="task-list">{taskList}</div>
+          </SortableContext>
+        </DndContext>
+
+        <div className="status-toggle">
+          <input
+            type="checkbox"
+            id="status"
+            name="Status"
+            onChange={() => setStatus((s) => !s)}
+          />
+          <label htmlFor="status">Show completed tasks</label>
+        </div>
       </div>
     </div>
   );
